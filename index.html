@@ -478,7 +478,7 @@
 
         // --- CHARTING DENGAN LOGIKA YANG SUDAH TERBUKTI ---
         function updateCharts() {
-            // 1. Performance by Position
+            // 1. Performance by Position (tetap sama)
             const posGroups = {};
             filteredData.forEach(d => {
                 if (!posGroups[d.Position]) posGroups[d.Position] = { leads: 0, booking: 0 };
@@ -492,25 +492,15 @@
 
             renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
 
-            // 2. Top 5 Performers - LOGIKA FINAL YANG PASTI BERHASIL
-            // Langkah 1: Sort DESCENDING (Terbesar dulu)
-            const sortedDesc = [...filteredData].sort((a, b) => {
-                const valA = Number(a.Jlh_Leads_Booking) || 0;
-                const valB = Number(b.Jlh_Leads_Booking) || 0;
-                return valB - valA;
-            });
-            
-            // Langkah 2: Ambil 5 teratas
-            const top5 = sortedDesc.slice(0, 5);
-            
-            // Langkah 3: REVERSE ARRAY agar Rank 1 jadi index terakhir
-            // Contoh: [Riza(4), Arief(3), Faisal(2), Ziqri(1), Maulana(1)]
-            // Menjadi: [Maulana(1), Ziqri(1), Faisal(2), Arief(3), Riza(4)]
-            const top5Reversed = [...top5].reverse();
+            // 2. Top 5 Performers - SOLUSI TERAKHIR
+            // Sort DESCENDING, ambil 5 teratas, JANGAN REVERSE ARRAY
+            const top5 = [...filteredData]
+                .sort((a, b) => (Number(b.Jlh_Leads_Booking) || 0) - (Number(a.Jlh_Leads_Booking) || 0))
+                .slice(0, 5);
 
-            const perfLabels = top5Reversed.map(d => d['Marketing Name']);
-            const perfLeads = top5Reversed.map(d => Number(d.Jlh_Leads) || 0);
-            const perfBooking = top5Reversed.map(d => Number(d.Jlh_Leads_Booking) || 0);
+            const perfLabels = top5.map(d => d['Marketing Name']);
+            const perfLeads = top5.map(d => Number(d.Jlh_Leads) || 0);
+            const perfBooking = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
 
             renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, true);
         }
@@ -594,7 +584,8 @@
                         },
                         y: { 
                             stacked: false,
-                            // TIDAK ADA reverse: true DI SINI
+                            // INI KUNCINYA: AKTIFKAN REVERSE HANYA UNTUK CHART PERFORMERS
+                            reverse: isHorizontal ? true : false,
                             ticks: { 
                                 display: isHorizontal, 
                                 color: textColor,
@@ -616,7 +607,6 @@
             if (canvasId === 'chartPosition') chartPosInstance = newChart;
             else chartPerfInstance = newChart;
         }
-
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
