@@ -23,8 +23,8 @@
         }
     </script>
     
-    <!-- Chart.js v3.9.1 - TANPA PLUGIN EKSTERNAL -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -213,11 +213,11 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
                 <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 border-b dark:border-gray-700 pb-2">Performance by Position</h3>
-                <canvas id="chartPosition"></canvas>
+                <div id="chartPosition"></div>
             </div>
             <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
                 <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 border-b dark:border-gray-700 pb-2">Top 5 Performers (Booking)</h3>
-                <canvas id="chartPerformers"></canvas>
+                <div id="chartPerformers"></div>
             </div>
         </div>
 
@@ -267,13 +267,9 @@
         // --- Global Variables ---
         let rawData = [];
         let filteredData = [];
-        let chartPosInstance = null;
-        let chartPerfInstance = null;
         let sortDirection = 1;
         let currentSortKey = '';
         let isNameFiltered = false;
-
-        // TIDAK PERLU REGISTER PLUGIN DATALABELS KARENA KITA GUNAKAN BAWAAN CHART.JS V3.X
 
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
@@ -475,7 +471,7 @@
             document.getElementById('percBooking').innerText = `(${percBook})`;
         }
 
-        // --- CHARTING DENGAN LOGIKA YANG SUDAH TERBUKTI ---
+        // --- CHARTING DENGAN APEXCHARTS ---
         function updateCharts() {
             // 1. Performance by Position
             const posGroups = {};
@@ -489,130 +485,93 @@
             const posLeadsData = posLabels.map(k => posGroups[k].leads);
             const posBookingData = posLabels.map(k => posGroups[k].booking);
 
-            renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
+            renderApexChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
 
-            // 2. Top 5 Performers - SORT DESCENDING, JANGAN REVERSE ARRAY
+            // 2. Top 5 Performers
             const top5 = [...filteredData]
                 .sort((a, b) => (Number(b.Jlh_Leads_Booking) || 0) - (Number(a.Jlh_Leads_Booking) || 0))
                 .slice(0, 5);
 
-            const perfLabels = top5.map(d => d['Marketing Name']);
-            const perfLeads = top5.map(d => Number(d.Jlh_Leads) || 0);
-            const perfBooking = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
+            const categories = top5.map(d => d['Marketing Name']);
+            const leadsData = top5.map(d => Number(d.Jlh_Leads) || 0);
+            const bookingData = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
 
-            renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, true);
+            renderApexChart('chartPerformers', categories, leadsData, bookingData, true);
         }
 
-        function renderBarChart(canvasId, labels, dataLeads, dataBooking, isHorizontal = false) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            
-            if (canvasId === 'chartPosition') {
-                if (chartPosInstance) chartPosInstance.destroy();
-            } else {
-                if (chartPerfInstance) chartPerfInstance.destroy();
-            }
-
+        function renderApexChart(elementId, categories, leadsData, bookingData, isHorizontal = false) {
             const isDark = document.documentElement.classList.contains('dark');
             const textColor = isDark ? '#cbd5e1' : '#475569';
 
-            const config = {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Leads Injected',
-                            data: dataLeads,
-                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                            borderColor: 'rgba(59, 130, 246, 1)',
-                            borderWidth: 1,
-                            // DATALABELS BAWAAN CHART.JS V3.X
-                            datalabels: {
-                                display: true,
-                                anchor: 'end',
-                                align: 'end',
-                                color: textColor,
-                                font: { weight: 'bold', size: 10 },
-                                formatter: function(value) {
-                                    return Math.round(value);
-                                }
-                            }
-                        },
-                        {
-                            label: 'Booking',
-                            data: dataBooking,
-                            backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                            borderColor: 'rgba(239, 68, 68, 1)',
-                            borderWidth: 1,
-                            datalabels: {
-                                display: true,
-                                anchor: 'end',
-                                align: 'end',
-                                color: textColor,
-                                font: { weight: 'bold', size: 10 },
-                                formatter: function(value) {
-                                    return Math.round(value);
-                                }
-                            }
-                        }
-                    ]
+            var options = {
+                series: [{
+                    name: 'Leads Injected',
+                    data: leadsData
+                }, {
+                    name: 'Booking',
+                    data: bookingData
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 350,
+                    toolbar: { show: false }
                 },
-                options: {
-                    responsive: true,
-                    indexAxis: isHorizontal ? 'y' : 'x',
-                    layout: {
-                        padding: isHorizontal ? { left: 10, right: 30 } : { top: 20 } 
-                    },
-                    plugins: {
-                        legend: { 
-                            position: 'top',
-                            labels: { 
-                                color: textColor,
-                                usePointStyle: true, 
-                                pointStyle: 'circle',
-                                font: { size: 10 } 
-                            }
-                        },
-                        title: { display: false },
-                        // Aktifkan datalabels bawaan
-                        datalabels: {
-                            display: true
-                        }
-                    },
-                    scales: {
-                        x: { 
-                            stacked: false,
-                            ticks: { 
-                                display: !isHorizontal, 
-                                color: textColor,
-                                font: { size: 10 }
-                            },
-                            grid: { display: false } 
-                        },
-                        y: { 
-                            stacked: false,
-                            // KUNCI UTAMA: REVERSE SUMBU Y UNTUK CHART PERFORMERS
-                            reverse: isHorizontal ? true : false,
-                            ticks: { 
-                                display: isHorizontal, 
-                                color: textColor,
-                                font: { size: 10 }
-                            },
-                            grid: { display: false } 
+                plotOptions: {
+                    bar: {
+                        horizontal: isHorizontal,
+                        distributed: false,
+                        dataLabels: {
+                            position: 'top'
                         }
                     }
+                },
+                dataLabels: {
+                    enabled: true,
+                    offsetX: -6,
+                    style: {
+                        fontSize: '10px',
+                        colors: [textColor]
+                    },
+                    formatter: function(val) {
+                        return Math.round(val);
+                    }
+                },
+                xaxis: {
+                    categories: isHorizontal ? categories : undefined,
+                    labels: {
+                        style: {
+                            colors: textColor,
+                            fontSize: '10px'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: textColor,
+                            fontSize: '10px'
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        colors: textColor
+                    }
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light'
                 }
             };
 
-            if (!isHorizontal) {
-                config.options.scales.x.ticks.display = false;
-                config.options.scales.y.ticks.display = false;
+            // Hapus chart lama jika ada
+            const existingChart = ApexCharts.getChartByID(elementId);
+            if (existingChart) {
+                existingChart.destroy();
             }
 
-            const newChart = new Chart(ctx, config);
-
-            if (canvasId === 'chartPosition') chartPosInstance = newChart;
-            else chartPerfInstance = newChart;
+            var chart = new ApexCharts(document.querySelector("#" + elementId), options);
+            chart.render();
         }
 
         function renderTable() {
