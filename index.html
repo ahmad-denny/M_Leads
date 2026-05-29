@@ -543,7 +543,7 @@
             renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, 'Top 5 Staff by Booking', true);
         }
 
-        function renderBarChart(canvasId, labels, dataLeads, dataBooking, title, isHorizontal = false) {
+        function renderBarChart(canvasId, labels, dataLeads, dataBooking, title, isHorizontal = true) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             
             if (canvasId === 'chartPosition') {
