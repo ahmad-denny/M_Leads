@@ -471,12 +471,12 @@
             document.getElementById('percBooking').innerText = `(${percBook})`;
         }
 
-        // --- CHARTING DENGAN APEXCHARTS ---
+        // --- CHARTING DENGAN APEXCHARTS - VERSI FINAL STABIL ---
         function updateCharts() {
             // 1. Performance by Position
             const posGroups = {};
             filteredData.forEach(d => {
-                const position = d.Position || 'Unknown'; // Handle jika Position null/undefined
+                const position = d.Position || 'Unknown'; // Handle null/undefined
                 if (!posGroups[position]) {
                     posGroups[position] = { leads: 0, booking: 0 };
                 }
@@ -495,8 +495,8 @@
                 booking: posBookingData
             });
 
-            // Pastikan data tidak kosong sebelum render
-            if (posLabels.length > 0) {
+            // Validasi ketat sebelum render
+            if (posLabels.length > 0 && posLeadsData.every(n => !isNaN(n)) && posBookingData.every(n => !isNaN(n))) {
                 renderApexChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
             } else {
                 document.querySelector("#chartPosition").innerHTML = 
@@ -512,15 +512,23 @@
             const leadsData = top5.map(d => Number(d.Jlh_Leads) || 0);
             const bookingData = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
 
-            renderApexChart('chartPerformers', categories, leadsData, bookingData, true);
+            // Validasi ketat sebelum render
+            if (categories.length > 0 && leadsData.every(n => !isNaN(n)) && bookingData.every(n => !isNaN(n))) {
+                renderApexChart('chartPerformers', categories, leadsData, bookingData, true);
+            } else {
+                document.querySelector("#chartPerformers").innerHTML = 
+                    '<div class="flex items-center justify-center h-[350px] text-gray-500">No performer data available</div>';
+            }
         }
 
         function renderApexChart(elementId, categories, leadsData, bookingData, isHorizontal = false) {
             const isDark = document.documentElement.classList.contains('dark');
             const textColor = isDark ? '#cbd5e1' : '#475569';
 
-            // Jika tidak ada data, tampilkan pesan
-            if (!categories || categories.length === 0) {
+            // Validasi akhir sebelum render
+            if (!categories || categories.length === 0 || 
+                !leadsData || leadsData.length === 0 || 
+                !bookingData || bookingData.length === 0) {
                 document.querySelector("#" + elementId).innerHTML = 
                     '<div class="flex items-center justify-center h-[350px] text-gray-500">No data available</div>';
                 return;
@@ -625,10 +633,16 @@
                 existingChart.destroy();
             }
 
-            var chart = new ApexCharts(document.querySelector("#" + elementId), options);
-            chart.render();
+            try {
+                var chart = new ApexCharts(document.querySelector("#" + elementId), options);
+                chart.render();
+            } catch (error) {
+                console.error("Error rendering chart:", error);
+                document.querySelector("#" + elementId).innerHTML = 
+                    '<div class="flex items-center justify-center h-[350px] text-red-500">Chart render failed</div>';
+            }
         }
-        
+
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
@@ -700,13 +714,6 @@
                 updateCharts(); 
             });
         }
-
-    console.log("Position Chart Data:", {
-    labels: posLabels,
-    leads: posLeadsData,
-    booking: posBookingData
-    });
-    </script>
-    
+    </script>    
 </body>
 </html>
