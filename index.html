@@ -221,6 +221,14 @@
             </div>
         </div>
 
+        <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
+            <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 border-b dark:border-gray-700 pb-2">Performance by Position</h3>
+            <div id="chartPositionFallback" class="hidden">
+                <!-- Grafik manual akan dirender di sini jika ApexCharts gagal -->
+            </div>
+            <div id="chartPosition"></div>
+        </div>
+        
         <!-- Data Table -->
         <div class="bg-white dark:bg-darkcard rounded-lg shadow overflow-hidden">
             <div class="p-3 md:p-4 border-b dark:border-gray-700 flex justify-between items-center">
@@ -509,6 +517,24 @@
                     '<div class="flex items-center justify-center h-[350px] text-gray-500">No position data available</div>';
             }
 
+            try {    
+                if (posLabels.length > 0 && 
+                    posLeadsData.every(n => typeof n === 'number' && !isNaN(n)) && 
+                    posBookingData.every(n => typeof n === 'number' && !isNaN(n))) {
+                    
+                    renderApexChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
+                } else {
+                    throw new Error("No valid position data");
+                }
+            } catch (error) {
+                console.error("ApexCharts failed, using fallback:", error);
+                // Sembunyikan canvas ApexCharts
+                document.querySelector("#chartPosition").classList.add('hidden');
+                // Tampilkan fallback manual
+                document.querySelector("#chartPositionFallback").classList.remove('hidden');
+                renderManualBarChart('chartPositionFallback', posLabels, posLeadsData, posBookingData);
+            }
+            
             // 2. Top 5 Performers
             const top5 = [...filteredData]
                 .sort((a, b) => (Number(b.Jlh_Leads_Booking) || 0) - (Number(a.Jlh_Leads_Booking) || 0))
@@ -617,6 +643,38 @@
                 document.querySelector("#" + elementId).innerHTML = 
                     '<div class="flex items-center justify-center h-[350px] text-red-500">Chart render failed: ' + error.message + '</div>';
             }
+        }
+
+        function renderManualBarChart(elementId, categories, leadsData, bookingData) {
+            const container = document.querySelector("#" + elementId);
+            if (!container) return;
+
+            let html = '<div class="space-y-3">';
+            
+            for (let i = 0; i < categories.length; i++) {
+                const maxVal = Math.max(...leadsData, ...bookingData);
+                const leadPercent = maxVal > 0 ? (leadsData[i] / maxVal) * 100 : 0;
+                const bookPercent = maxVal > 0 ? (bookingData[i] / maxVal) * 100 : 0;
+
+                html += `
+                    <div class="flex items-center text-xs">
+                        <span class="w-32 truncate">${categories[i]}</span>
+                        <div class="flex-1 mx-2">
+                            <div class="flex space-x-1 h-4">
+                                <div class="bg-blue-500 rounded-l" style="width: ${leadPercent}%;" title="Leads: ${leadsData[i]}"></div>
+                                <div class="bg-green-500 rounded-r" style="width: ${bookPercent}%;" title="Booking: ${bookingData[i]}"></div>
+                            </div>
+                        </div>
+                        <div class="w-16 text-right">
+                            <span class="text-blue-600">${leadsData[i]}</span> / 
+                            <span class="text-green-600">${bookingData[i]}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
         }
         
         function renderTable() {
