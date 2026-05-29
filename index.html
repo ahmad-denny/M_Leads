@@ -476,9 +476,12 @@
             // 1. Performance by Position
             const posGroups = {};
             filteredData.forEach(d => {
-                if (!posGroups[d.Position]) posGroups[d.Position] = { leads: 0, booking: 0 };
-                posGroups[d.Position].leads += (Number(d.Jlh_Leads) || 0);
-                posGroups[d.Position].booking += (Number(d.Jlh_Leads_Booking) || 0);
+                const position = d.Position || 'Unknown'; // Handle jika Position null/undefined
+                if (!posGroups[position]) {
+                    posGroups[position] = { leads: 0, booking: 0 };
+                }
+                posGroups[position].leads += (Number(d.Jlh_Leads) || 0);
+                posGroups[position].booking += (Number(d.Jlh_Leads_Booking) || 0);
             });
 
             const posLabels = Object.keys(posGroups);
@@ -492,7 +495,13 @@
                 booking: posBookingData
             });
 
-            renderApexChart('chartPosition', posLabels, posLeadsData, posBookingData, false); // false = vertical bar
+            // Pastikan data tidak kosong sebelum render
+            if (posLabels.length > 0) {
+                renderApexChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
+            } else {
+                document.querySelector("#chartPosition").innerHTML = 
+                    '<div class="flex items-center justify-center h-[350px] text-gray-500">No position data available</div>';
+            }
 
             // 2. Top 5 Performers
             const top5 = [...filteredData]
@@ -503,8 +512,9 @@
             const leadsData = top5.map(d => Number(d.Jlh_Leads) || 0);
             const bookingData = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
 
-            renderApexChart('chartPerformers', categories, leadsData, bookingData, true); // true = horizontal bar
+            renderApexChart('chartPerformers', categories, leadsData, bookingData, true);
         }
+
         function renderApexChart(elementId, categories, leadsData, bookingData, isHorizontal = false) {
             const isDark = document.documentElement.classList.contains('dark');
             const textColor = isDark ? '#cbd5e1' : '#475569';
@@ -618,6 +628,7 @@
             var chart = new ApexCharts(document.querySelector("#" + elementId), options);
             chart.render();
         }
+        
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
