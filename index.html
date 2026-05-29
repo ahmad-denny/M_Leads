@@ -71,7 +71,6 @@
     <div class="container mx-auto p-2 md:p-4 space-y-4 md:space-y-6">
 
         <!-- Summary Cards (Compact Mobile Version) -->
-        <!-- Grid: 2 columns on mobile, 3 on tablet, 5 on desktop -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
             
             <!-- Card 1: Team Sales -->
@@ -163,11 +162,14 @@
                     </select>
                 </div>
 
-                <!-- Select Position -->
+                <!-- Select Position (With All RM & All CS) -->
                 <div>
                     <label class="block text-xs md:text-sm font-medium mb-1">Position</label>
                     <select id="filterPosition" class="w-full p-2 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="">All Positions</option>
+                        <option value="__ALL_RM__" class="font-bold text-blue-600">-- All RM --</option>
+                        <option value="__ALL_CS__" class="font-bold text-green-600">-- All CS --</option>
+                        <!-- Other positions will be added via JS -->
                     </select>
                 </div>
 
@@ -274,7 +276,6 @@
                 const json = await response.json();
                 
                 // Clean Data: Trim keys and values, parse numbers
-                // Note: The JSON key is "leads " with a space, so we access it carefully or check the structure
                 const leadsArray = json.leads || json["leads "] || [];
                 
                 rawData = leadsArray.map(item => {
@@ -308,11 +309,15 @@
         // --- Dropdown Population ---
         function populateDropdowns() {
             const periods = [...new Set(rawData.map(d => d.Period))].sort();
+            // Get unique positions, but exclude the special group keys we will add manually
             const positions = [...new Set(rawData.map(d => d.Position))].sort();
             const branches = [...new Set(rawData.map(d => d.Branch))].sort();
 
             fillSelect('filterPeriod', periods);
+            
+            // Add specific positions to the existing options (All RM/CS are already in HTML)
             fillSelect('filterPosition', positions);
+            
             fillSelect('filterBranch', branches);
         }
 
@@ -341,7 +346,19 @@
 
                 // Dropdown Filters
                 const matchPeriod = periodVal ? item.Period === periodVal : true;
-                const matchPos = posVal ? item.Position === posVal : true;
+                
+                // Special Logic for Position (All RM / All CS)
+                let matchPos = true;
+                if (posVal) {
+                    if (posVal === '__ALL_RM__') {
+                        matchPos = item.Position && item.Position.includes('RM');
+                    } else if (posVal === '__ALL_CS__') {
+                        matchPos = item.Position && item.Position.includes('CS');
+                    } else {
+                        matchPos = item.Position === posVal;
+                    }
+                }
+
                 const matchBranch = branchVal ? item.Branch === branchVal : true;
 
                 return matchText && matchPeriod && matchPos && matchBranch;
@@ -395,7 +412,6 @@
             renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, 'Leads vs Booking by Position');
 
             // 2. Top 10 Performers (by Booking)
-            // Sort filtered data by booking desc, take top 10
             const topPerformers = [...filteredData]
                 .sort((a, b) => (b.Jlh_Leads_Booking || 0) - (a.Jlh_Leads_Booking || 0))
                 .slice(0, 10);
