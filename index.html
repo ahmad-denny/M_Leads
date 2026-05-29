@@ -474,7 +474,7 @@
 
         // --- CHARTING DENGAN APEXCHARTS - VERSI FINAL STABIL ---
         function updateCharts() {
-            // 1. Performance by Position - SELALU GUNAKAN FALLBACK MANUAL
+            // 1. Performance by Position - GUNAKAN FALLBACK MANUAL
             const posGroups = {};
             filteredData.forEach(d => {
                 const position = d.Position || 'Unknown';
@@ -501,7 +501,7 @@
             document.querySelector("#chartPositionFallback").classList.remove('hidden');
             renderManualBarChart('chartPositionFallback', posLabels, posLeadsData, posBookingData);
 
-            // 2. Top 5 Performers - Tetap gunakan ApexCharts (karena horizontal bar bekerja sempurna)
+            // 2. Top 5 Performers - JUGA GUNAKAN FALLBACK MANUAL AGAR KONSISTEN
             const top5 = [...filteredData]
                 .sort((a, b) => (Number(b.Jlh_Leads_Booking) || 0) - (Number(a.Jlh_Leads_Booking) || 0))
                 .slice(0, 5);
@@ -510,16 +510,20 @@
             const leadsData = top5.map(d => Number(d.Jlh_Leads) || 0);
             const bookingData = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
 
-            // Validasi ketat sebelum render
-            if (categories.length > 0 && 
-                leadsData.every(n => typeof n === 'number' && !isNaN(n)) && 
-                bookingData.every(n => typeof n === 'number' && !isNaN(n))) {
-                
-                renderApexChart('chartPerformers', categories, leadsData, bookingData, true);
-            } else {
-                document.querySelector("#chartPerformers").innerHTML = 
-                    '<div class="flex items-center justify-center h-[350px] text-gray-500">No performer data available</div>';
+            // Sembunyikan canvas ApexCharts dan tampilkan fallback manual
+            document.querySelector("#chartPerformers").classList.add('hidden');
+            
+            // Buat elemen fallback jika belum ada
+            let fallbackContainer = document.querySelector("#chartPerformersFallback");
+            if (!fallbackContainer) {
+                fallbackContainer = document.createElement('div');
+                fallbackContainer.id = 'chartPerformersFallback';
+                fallbackContainer.className = 'mt-4'; // Tambahkan margin top agar rapi
+                document.querySelector("#chartPerformers").parentNode.appendChild(fallbackContainer);
             }
+            
+            fallbackContainer.classList.remove('hidden');
+            renderManualBarChart('chartPerformersFallback', categories, leadsData, bookingData);
         }
         
         function renderApexChart(elementId, categories, leadsData, bookingData, isHorizontal = false) {
