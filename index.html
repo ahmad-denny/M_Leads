@@ -113,7 +113,7 @@
                 </div>
             </div>
 
-            <!-- Card 3: Follow Up -->
+            <!-- Card 3: Follow Up (With %) -->
             <div class="card bg-white dark:bg-darkcard p-2 md:p-4 rounded-lg shadow border-l-4 border-yellow-500 flex flex-col justify-between">
                 <div class="flex items-center space-x-2 md:space-x-3">
                     <div class="p-2 md:p-3 bg-yellow-100 dark:bg-yellow-900 rounded-full text-yellow-600 dark:text-yellow-300 shrink-0">
@@ -121,12 +121,15 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Follow Up</p>
-                        <h2 class="text-lg md:text-2xl font-bold leading-tight" id="sumFU">0</h2>
+                        <div class="flex items-baseline space-x-1">
+                            <h2 class="text-lg md:text-2xl font-bold leading-tight" id="sumFU">0</h2>
+                            <span class="text-xs font-semibold text-yellow-600 dark:text-yellow-400" id="percFU">(0%)</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Card 4: Interested -->
+            <!-- Card 4: Interested (With %) -->
             <div class="card bg-white dark:bg-darkcard p-2 md:p-4 rounded-lg shadow border-l-4 border-green-500 flex flex-col justify-between">
                 <div class="flex items-center space-x-2 md:space-x-3">
                     <div class="p-2 md:p-3 bg-green-100 dark:bg-green-900 rounded-full text-green-600 dark:text-green-300 shrink-0">
@@ -134,12 +137,15 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Interested</p>
-                        <h2 class="text-lg md:text-2xl font-bold leading-tight" id="sumInterest">0</h2>
+                        <div class="flex items-baseline space-x-1">
+                            <h2 class="text-lg md:text-2xl font-bold leading-tight" id="sumInterest">0</h2>
+                            <span class="text-xs font-semibold text-green-600 dark:text-green-400" id="percInterest">(0%)</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Card 5: Booking -->
+            <!-- Card 5: Booking (With %) -->
             <div class="card bg-white dark:bg-darkcard p-2 md:p-4 rounded-lg shadow border-l-4 border-red-500 flex flex-col justify-between col-span-2 md:col-span-1">
                 <div class="flex items-center space-x-2 md:space-x-3">
                     <div class="p-2 md:p-3 bg-red-100 dark:bg-red-900 rounded-full text-red-600 dark:text-red-300 shrink-0">
@@ -147,7 +153,10 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Booking</p>
-                        <h2 class="text-lg md:text-2xl font-bold leading-tight" id="sumBooking">0</h2>
+                        <div class="flex items-baseline space-x-1">
+                            <h2 class="text-lg md:text-2xl font-bold leading-tight" id="sumBooking">0</h2>
+                            <span class="text-xs font-semibold text-red-600 dark:text-red-400" id="percBooking">(0%)</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -464,12 +473,25 @@
             const sum = (key) => filteredData.reduce((acc, curr) => acc + (curr[key] || 0), 0);
             const uniqueNiks = new Set(filteredData.map(d => d.NIK));
             
+            const totalLeads = sum('Jlh_Leads');
+            const totalFU = sum('Jlh_Leads_FU');
+            const totalInt = sum('Jlh_Leads_Interested');
+            const totalBook = sum('Jlh_Leads_Booking');
+
+            // Calculate Percentages
+            const calcPerc = (val, total) => total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+            
+            const percFU = calcPerc(totalFU, totalLeads);
+            const percInt = calcPerc(totalInt, totalLeads);
+            const percBook = calcPerc(totalBook, totalLeads);
+
+            // Update Numbers
             const targets = [
                 { id: 'sumTeam', val: uniqueNiks.size },
-                { id: 'sumLeads', val: sum('Jlh_Leads') },
-                { id: 'sumFU', val: sum('Jlh_Leads_FU') },
-                { id: 'sumInterest', val: sum('Jlh_Leads_Interested') },
-                { id: 'sumBooking', val: sum('Jlh_Leads_Booking') }
+                { id: 'sumLeads', val: totalLeads },
+                { id: 'sumFU', val: totalFU },
+                { id: 'sumInterest', val: totalInt },
+                { id: 'sumBooking', val: totalBook }
             ];
 
             targets.forEach(t => {
@@ -479,6 +501,11 @@
                     animateValue(el, currentVal, t.val, 1000);
                 }
             });
+
+            // Update Percentages Text
+            document.getElementById('percFU').innerText = `(${percFU})`;
+            document.getElementById('percInterest').innerText = `(${percInt})`;
+            document.getElementById('percBooking').innerText = `(${percBook})`;
         }
 
         // --- Charting ---
@@ -495,19 +522,23 @@
             const posLeadsData = posLabels.map(k => posGroups[k].leads);
             const posBookingData = posLabels.map(k => posGroups[k].booking);
 
-            renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, 'Leads vs Booking by Position', true);
+            renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, 'Leads vs Booking by Position', false);
 
             // 2. Top 5 Performers (by Booking)
-            const topPerformers = [...filteredData]
-                .sort((a, b) => (b.Jlh_Leads_Booking || 0) - (a.Jlh_Leads_Booking || 0))
-                .slice(0, 5); // Take top 5
+            // Sort Descending first to get the highest values
+            const sortedDesc = [...filteredData]
+                .sort((a, b) => (b.Jlh_Leads_Booking || 0) - (a.Jlh_Leads_Booking || 0));
+            
+            // Take top 5
+            const top5 = sortedDesc.slice(0, 5);
 
-            // Reverse to show highest at top for horizontal bar
-            topPerformers.reverse();
+            // For Horizontal Bar Chart (IndexAxis 'y'), ChartJS renders the first item in the array at the BOTTOM.
+            // To show Rank 1 at the TOP, we must Reverse the array before passing it to the chart.
+            const top5Reversed = [...top5].reverse();
 
-            const perfLabels = topPerformers.map(d => d['Marketing Name']);
-            const perfLeads = topPerformers.map(d => d.Jlh_Leads || 0);
-            const perfBooking = topPerformers.map(d => d.Jlh_Leads_Booking || 0);
+            const perfLabels = top5Reversed.map(d => d['Marketing Name']);
+            const perfLeads = top5Reversed.map(d => d.Jlh_Leads || 0);
+            const perfBooking = top5Reversed.map(d => d.Jlh_Leads_Booking || 0);
 
             renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, 'Top 5 Staff by Booking', true);
         }
@@ -537,7 +568,7 @@
                             borderWidth: 1,
                             datalabels: {
                                 anchor: 'end',
-                                align: 'end', // For vertical bars
+                                align: 'end', 
                                 color: textColor,
                                 font: { weight: 'bold', size: 10 },
                                 formatter: Math.round
@@ -551,7 +582,7 @@
                             borderWidth: 1,
                             datalabels: {
                                 anchor: 'end',
-                                align: 'end', // For vertical bars
+                                align: 'end', 
                                 color: textColor,
                                 font: { weight: 'bold', size: 10 },
                                 formatter: Math.round,
@@ -564,17 +595,16 @@
                     responsive: true,
                     indexAxis: isHorizontal ? 'y' : 'x',
                     layout: {
-                        padding: isHorizontal ? { left: 10, right: 30 } : { top: 20 } // Padding for names if horizontal
+                        padding: isHorizontal ? { left: 10, right: 30 } : { top: 20 } 
                     },
                     plugins: {
                         legend: { 
                             position: 'top',
                             labels: { 
                                 color: textColor,
-                                //boxWidth: 10,
-                                usePointStyle: true, // Mengubah ikon menjadi titik (lingkaran)
+                                usePointStyle: true, 
                                 pointStyle: 'circle',
-                                font: { size: 10 } // Smaller Legend Font
+                                font: { size: 10 } 
                             }
                         },
                         title: { display: false },
@@ -586,21 +616,21 @@
                         x: { 
                             stacked: false,
                             ticks: { 
-                                display: !isHorizontal, // Hide X numbers for Horizontal Chart (Performers). Show for Vertical (Position) if needed, but request said hide all grid numbers.
+                                display: !isHorizontal, 
                                 color: textColor,
                                 font: { size: 10 }
                             },
-                            grid: { display: false } // Hide Grid
+                            grid: { display: false } 
                         },
                         y: { 
                             stacked: false,
                             ticks: { 
-                                display: isHorizontal, // Show Y numbers (Names) for Horizontal Chart. Hide for Vertical (Position) as requested.
+                                display: isHorizontal, 
                                 color: textColor,
                                 font: { size: 10 },
                                 display: true
                             },
-                            grid: { display: false } // Hide Grid
+                            grid: { display: false } 
                         }
                     }
                 }
