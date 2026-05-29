@@ -498,14 +498,14 @@
                 .sort((a, b) => (Number(b.Jlh_Leads_Booking) || 0) - (Number(a.Jlh_Leads_Booking) || 0))
                 .slice(0, 5);
 
+            // JANGAN REVERSE ARRAY DI SINI!
             const perfLabels = top5.map(d => d['Marketing Name']);
             const perfLeads = top5.map(d => Number(d.Jlh_Leads) || 0);
             const perfBooking = top5.map(d => Number(d.Jlh_Leads_Booking) || 0);
 
             renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, true);
         }
-
-        function renderBarChart(canvasId, labels, dataLeads, dataBooking, isHorizontal = false) {
+                function renderBarChart(canvasId, labels, dataLeads, dataBooking, isHorizontal = false) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             
             if (canvasId === 'chartPosition') {
@@ -584,14 +584,32 @@
                         },
                         y: { 
                             stacked: false,
-                            // INI KUNCINYA: AKTIFKAN REVERSE HANYA UNTUK CHART PERFORMERS
-                            reverse: isHorizontal ? true : false,
+                            // TIDAK ADA reverse: true DI SINI
                             ticks: { 
                                 display: isHorizontal, 
                                 color: textColor,
                                 font: { size: 10 }
                             },
                             grid: { display: false } 
+                        }
+                    },
+                    // TAMBAHAN: Callback setelah chart selesai dirender
+                    onComplete: function() {
+                        if (isHorizontal && canvasId === 'chartPerformers') {
+                            // Ambil container chart
+                            const chartContainer = this.canvas.closest('.bg-white, .dark\\:bg-darkcard');
+                            if (!chartContainer) return;
+                            
+                            // Ambil semua elemen label Y (nama-nama performer)
+                            const yAxisLabels = chartContainer.querySelectorAll('.chartjs-render-monitor + div div div div span');
+                            
+                            // Jika ada label, balik urutannya
+                            if (yAxisLabels.length > 0) {
+                                const parent = yAxisLabels[0].parentNode.parentNode;
+                                for (let i = parent.children.length - 1; i >= 0; i--) {
+                                    parent.appendChild(parent.children[i]);
+                                }
+                            }
                         }
                     }
                 }
@@ -607,6 +625,8 @@
             if (canvasId === 'chartPosition') chartPosInstance = newChart;
             else chartPerfInstance = newChart;
         }
+
+        
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
