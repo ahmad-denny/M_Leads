@@ -524,25 +524,28 @@
                 posGroups[d.Position].booking += (d.Jlh_Leads_Booking || 0);
             });
 
-            // Map Labels
+            // Map Labels for Mobile vs Desktop
             const labelMap = {
                 'CS Hybrid': 'CSH',
                 'CS Reguler': 'CSR',
                 'RM Consumer': 'RMC',
-                'RM Funding  & Hajj': 'RMFH',
+                'RM Funding  & Hajj': 'RMFH', // Fixed spacing match
                 'RM Priority': 'RMP',
                 'RM SME': 'RMS'
             };
 
-            const posLabels = Object.keys(posGroups).map(k => labelMap[k] || k);
-            const posKeys = Object.keys(posGroups); // Keep original keys for data mapping if needed, but here order matches
+            // Check if mobile (simple check via window width)
+            const isMobile = window.innerWidth < 768;
+            
+            const posKeys = Object.keys(posGroups);
+            const posLabels = posKeys.map(k => isMobile ? (labelMap[k] || k) : k);
             
             const posLeadsData = posKeys.map(k => posGroups[k].leads);
             const posBookingData = posKeys.map(k => posGroups[k].booking);
 
             renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, 'Leads vs Booking by Position', false);
 
-            // 2. Top 5 Performers (by Booking)
+            // 2. Top 5 Performers (by Booking) - Always from filteredData
             const topPerformers = [...filteredData]
                 .sort((a, b) => (b.Jlh_Leads_Booking || 0) - (a.Jlh_Leads_Booking || 0))
                 .slice(0, 5); // Take top 5
