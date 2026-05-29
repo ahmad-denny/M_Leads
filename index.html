@@ -533,23 +533,18 @@
 
             // 2. Top 5 Performers (by Booking)
             // PERBAIKAN LOGIKA SORTING CHART HORIZONTAL
-            // Chart JS Horizontal: Index 0 ada di BAWAH, Index Terakhir ada di ATAS.
-            // Agar Rank 1 (Terbesar) ada di ATAS, dia harus menjadi index terakhir.
-            // Maka kita urutkan ASCENDING (Terkecil -> Terbesar).
+            // Kita urutkan DESCENDING (Terbesar -> Terkecil)
+            const sortedDesc = [...filteredData]
+                .sort((a, b) => (b.Jlh_Leads_Booking || 0) - (a.Jlh_Leads_Booking || 0));
             
-            const sortedAsc = [...filteredData]
-                .sort((a, b) => (a.Jlh_Leads_Booking || 0) - (b.Jlh_Leads_Booking || 0));
-            
-            // Ambil 5 data terbesar (paling belakang dari array ascending)
-            const top5 = sortedAsc.slice(-5);
-
-            // Tidak perlu reverse lagi karena slice(-5) dari ascending sudah menghasilkan [kecil, ..., besar]
-            // kecil (rank 5) akan di bawah, besar (rank 1) akan di atas.
+            // Ambil 5 data terbesar
+            const top5 = sortedDesc.slice(0, 5);
 
             const perfLabels = top5.map(d => d['Marketing Name']);
             const perfLeads = top5.map(d => d.Jlh_Leads || 0);
             const perfBooking = top5.map(d => d.Jlh_Leads_Booking || 0);
 
+            // Panggil render dengan flag isHorizontal = true
             renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, 'Top 5 Staff by Booking', true);
         }
 
@@ -634,6 +629,9 @@
                         },
                         y: { 
                             stacked: false,
+                            // PERBAIKAN UTAMA DI SINI:
+                            // reverse: true memaksa item pertama di array (Rank 1) muncul di ATAS
+                            reverse: isHorizontal, 
                             ticks: { 
                                 display: isHorizontal, 
                                 color: textColor,
