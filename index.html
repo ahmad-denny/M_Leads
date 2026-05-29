@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Leads Dashboard</title>
+    <title>Sales Lead Dashboard</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,7 +23,7 @@
         }
     </script>
     
-    <!-- ApexCharts v4.1.0 - Dengan Hash CDN untuk Memastikan Versi Baru -->
+    <!-- ApexCharts v4.1.0 - Versi Stabil Terbaru -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@4.1.0/dist/apexcharts.min.js"></script>
     
     <!-- Icons -->
@@ -213,6 +213,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
                 <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 border-b dark:border-gray-700 pb-2">Performance by Position</h3>
+                <div id="chartPositionFallback" class="hidden"></div>
                 <div id="chartPosition"></div>
             </div>
             <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
@@ -221,14 +222,6 @@
             </div>
         </div>
 
-        <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
-            <h3 class="text-base md:text-lg font-semibold mb-3 md:mb-4 border-b dark:border-gray-700 pb-2">Performance by Position</h3>
-            <div id="chartPositionFallback" class="hidden">
-                <!-- Grafik manual akan dirender di sini jika ApexCharts gagal -->
-            </div>
-            <div id="chartPosition"></div>
-        </div>
-        
         <!-- Data Table -->
         <div class="bg-white dark:bg-darkcard rounded-lg shadow overflow-hidden">
             <div class="p-3 md:p-4 border-b dark:border-gray-700 flex justify-between items-center">
@@ -496,7 +489,6 @@
             const posLeadsData = posLabels.map(k => posGroups[k].leads);
             const posBookingData = posLabels.map(k => posGroups[k].booking);
 
-            // DEBUGGING DETAIL
             console.log("=== POSITION CHART DEBUG ===");
             console.log("posLabels:", posLabels);
             console.log("posLeadsData:", posLeadsData);
@@ -504,20 +496,8 @@
             console.log("filteredData length:", filteredData.length);
             console.log("===========================");
 
-            // Validasi ketat sebelum render
-            if (posLabels.length > 0 && 
-                posLeadsData.every(n => typeof n === 'number' && !isNaN(n)) && 
-                posBookingData.every(n => typeof n === 'number' && !isNaN(n))) {
-                
-                console.log("Rendering Position Chart...");
-                renderApexChart('chartPosition', posLabels, posLeadsData, posBookingData, false);
-            } else {
-                console.warn("No valid position data to render");
-                document.querySelector("#chartPosition").innerHTML = 
-                    '<div class="flex items-center justify-center h-[350px] text-gray-500">No position data available</div>';
-            }
-
-            try {    
+            // Coba render dengan ApexCharts
+            try {
                 if (posLabels.length > 0 && 
                     posLeadsData.every(n => typeof n === 'number' && !isNaN(n)) && 
                     posBookingData.every(n => typeof n === 'number' && !isNaN(n))) {
@@ -527,14 +507,12 @@
                     throw new Error("No valid position data");
                 }
             } catch (error) {
-                console.error("ApexCharts failed, using fallback:", error);
-                // Sembunyikan canvas ApexCharts
+                console.error("ApexCharts failed for Position, using fallback:", error);
                 document.querySelector("#chartPosition").classList.add('hidden');
-                // Tampilkan fallback manual
                 document.querySelector("#chartPositionFallback").classList.remove('hidden');
                 renderManualBarChart('chartPositionFallback', posLabels, posLeadsData, posBookingData);
             }
-            
+
             // 2. Top 5 Performers
             const top5 = [...filteredData]
                 .sort((a, b) => (Number(b.Jlh_Leads_Booking) || 0) - (Number(a.Jlh_Leads_Booking) || 0))
@@ -549,14 +527,13 @@
                 leadsData.every(n => typeof n === 'number' && !isNaN(n)) && 
                 bookingData.every(n => typeof n === 'number' && !isNaN(n))) {
                 
-                console.log("Rendering Performers Chart...");
                 renderApexChart('chartPerformers', categories, leadsData, bookingData, true);
             } else {
-                console.warn("No valid performer data to render");
                 document.querySelector("#chartPerformers").innerHTML = 
                     '<div class="flex items-center justify-center h-[350px] text-gray-500">No performer data available</div>';
             }
         }
+
         function renderApexChart(elementId, categories, leadsData, bookingData, isHorizontal = false) {
             const isDark = document.documentElement.classList.contains('dark');
             const textColor = isDark ? '#cbd5e1' : '#475569';
@@ -570,6 +547,14 @@
                 return;
             }
 
+            // HAPUS CHART LAMA DENGAN BENAR
+            const container = document.querySelector("#" + elementId);
+            if (container) {
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+            }
+
             var options = {
                 series: [{
                     name: 'Leads Injected',
@@ -581,7 +566,10 @@
                 chart: {
                     type: 'bar',
                     height: 350,
-                    toolbar: { show: false }
+                    toolbar: { show: false },
+                    animations: {
+                        enabled: false // Matikan animasi untuk mencegah konflik
+                    }
                 },
                 plotOptions: {
                     bar: {
@@ -628,20 +616,14 @@
                 colors: ['#3b82f6', '#10b981']
             };
 
-            // Hapus chart lama jika ada
-            const existingChart = ApexCharts.getChartByID(elementId);
-            if (existingChart) {
-                existingChart.destroy();
-            }
-
             try {
-                var chart = new ApexCharts(document.querySelector("#" + elementId), options);
+                var chart = new ApexCharts(container, options);
                 chart.render();
                 console.log(`Chart ${elementId} rendered successfully`);
             } catch (error) {
                 console.error(`Error rendering chart ${elementId}:`, error);
-                document.querySelector("#" + elementId).innerHTML = 
-                    '<div class="flex items-center justify-center h-[350px] text-red-500">Chart render failed: ' + error.message + '</div>';
+                container.innerHTML = 
+                    '<div class="flex items-center justify-center h-[350px] text-red-500">Chart render failed</div>';
             }
         }
 
@@ -649,23 +631,26 @@
             const container = document.querySelector("#" + elementId);
             if (!container) return;
 
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#475569';
+
             let html = '<div class="space-y-3">';
             
             for (let i = 0; i < categories.length; i++) {
-                const maxVal = Math.max(...leadsData, ...bookingData);
-                const leadPercent = maxVal > 0 ? (leadsData[i] / maxVal) * 100 : 0;
-                const bookPercent = maxVal > 0 ? (bookingData[i] / maxVal) * 100 : 0;
+                const maxVal = Math.max(...leadsData, ...bookingData, 1); // Hindari division by zero
+                const leadPercent = (leadsData[i] / maxVal) * 100;
+                const bookPercent = (bookingData[i] / maxVal) * 100;
 
                 html += `
                     <div class="flex items-center text-xs">
-                        <span class="w-32 truncate">${categories[i]}</span>
+                        <span class="w-32 truncate" style="color: ${textColor}">${categories[i]}</span>
                         <div class="flex-1 mx-2">
                             <div class="flex space-x-1 h-4">
                                 <div class="bg-blue-500 rounded-l" style="width: ${leadPercent}%;" title="Leads: ${leadsData[i]}"></div>
                                 <div class="bg-green-500 rounded-r" style="width: ${bookPercent}%;" title="Booking: ${bookingData[i]}"></div>
                             </div>
                         </div>
-                        <div class="w-16 text-right">
+                        <div class="w-16 text-right" style="color: ${textColor}">
                             <span class="text-blue-600">${leadsData[i]}</span> / 
                             <span class="text-green-600">${bookingData[i]}</span>
                         </div>
@@ -676,7 +661,7 @@
             html += '</div>';
             container.innerHTML = html;
         }
-        
+
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
@@ -748,6 +733,6 @@
                 updateCharts(); 
             });
         }
-    </script>    
+    </script>
 </body>
 </html>
