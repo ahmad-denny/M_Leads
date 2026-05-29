@@ -85,7 +85,7 @@
     <div class="container mx-auto p-2 md:p-4 space-y-4 md:space-y-6">
 
         <!-- Summary Cards (Compact Mobile Version) -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+        <div id="summarySection" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4 scroll-mt-20">
             
             <!-- Card 1: Team Sales -->
             <div class="card bg-white dark:bg-darkcard p-2 md:p-4 rounded-lg shadow border-l-4 border-blue-500 flex flex-col justify-between">
@@ -153,6 +153,17 @@
             </div>
         </div>
 
+        <!-- Active Filter Indicator & Reset (Hidden by default) -->
+        <div id="activeFilterBanner" class="hidden bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg flex justify-between items-center animate-pulse">
+            <div class="flex items-center text-sm text-blue-800 dark:text-blue-200">
+                <i class="fas fa-filter mr-2"></i>
+                <span>Filtering by Name: <strong id="activeFilterName">-</strong></span>
+            </div>
+            <button onclick="resetSpecificFilter()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition">
+                <i class="fas fa-times mr-1"></i> Clear Name Filter
+            </button>
+        </div>
+
         <!-- Filters Section (Compact Mobile Layout) -->
         <div class="bg-white dark:bg-darkcard p-3 md:p-4 rounded-lg shadow">
             <!-- Mobile: 2 columns, Desktop: 5 columns -->
@@ -198,7 +209,7 @@
                 <!-- Reset Button (Full width on mobile, auto on desktop) -->
                 <div class="col-span-2 md:col-span-2 lg:col-span-1">
                     <button id="btnReset" class="w-full bg-gray-500 hover:bg-gray-600 text-white text-sm font-bold py-2 px-4 rounded transition flex justify-center items-center">
-                        <i class="fas fa-undo mr-2"></i> Reset
+                        <i class="fas fa-undo mr-2"></i> Reset All
                     </button>
                 </div>
             </div>
@@ -272,6 +283,7 @@
         let chartPerfInstance = null;
         let sortDirection = 1; // 1 for asc, -1 for desc
         let currentSortKey = '';
+        let isNameFiltered = false;
 
         // Register ChartJS DataLabels Plugin
         Chart.register(ChartDataLabels);
@@ -282,7 +294,10 @@
             setupTheme();
             
             // Event Listeners for Filters
-            document.getElementById('filterInput').addEventListener('input', applyFilters);
+            document.getElementById('filterInput').addEventListener('input', (e) => {
+                isNameFiltered = e.target.value.length > 0;
+                applyFilters();
+            });
             document.getElementById('filterPeriod').addEventListener('change', applyFilters);
             document.getElementById('filterPosition').addEventListener('change', applyFilters);
             document.getElementById('filterBranch').addEventListener('change', applyFilters);
@@ -375,6 +390,20 @@
             });
 
             updateDashboard();
+            updateActiveFilterBanner();
+        }
+
+        function updateActiveFilterBanner() {
+            const banner = document.getElementById('activeFilterBanner');
+            const nameVal = document.getElementById('filterInput').value;
+            const nameDisplay = document.getElementById('activeFilterName');
+            
+            if (nameVal.length > 0) {
+                banner.classList.remove('hidden');
+                nameDisplay.textContent = nameVal;
+            } else {
+                banner.classList.add('hidden');
+            }
         }
 
         function resetFilters() {
@@ -382,17 +411,32 @@
             document.getElementById('filterPeriod').value = '';
             document.getElementById('filterPosition').value = '';
             document.getElementById('filterBranch').value = '';
+            isNameFiltered = false;
             applyFilters();
+        }
+
+        function resetSpecificFilter() {
+            document.getElementById('filterInput').value = '';
+            isNameFiltered = false;
+            applyFilters();
+            // Scroll to summary again
+            document.getElementById('summarySection').scrollIntoView({ behavior: 'smooth' });
         }
 
         // --- Click Name to Filter ---
         function filterByName(name) {
             document.getElementById('filterInput').value = name;
+            isNameFiltered = true;
+            
             // Reset other filters to ensure we see all data for this person
             document.getElementById('filterPeriod').value = '';
             document.getElementById('filterPosition').value = '';
             document.getElementById('filterBranch').value = '';
+            
             applyFilters();
+            
+            // Scroll to summary section smoothly
+            document.getElementById('summarySection').scrollIntoView({ behavior: 'smooth' });
         }
 
         // --- Dashboard Updates ---
@@ -493,9 +537,10 @@
                             borderWidth: 1,
                             datalabels: {
                                 anchor: 'end',
-                                align: 'top',
+                                align: 'top', // For vertical bars
                                 color: textColor,
-                                font: { weight: 'bold', size: 10 }
+                                font: { weight: 'bold', size: 10 },
+                                formatter: Math.round
                             }
                         },
                         {
@@ -506,9 +551,10 @@
                             borderWidth: 1,
                             datalabels: {
                                 anchor: 'end',
-                                align: 'top',
+                                align: 'top', // For vertical bars
                                 color: textColor,
-                                font: { weight: 'bold', size: 10 }
+                                font: { weight: 'bold', size: 10 },
+                                formatter: Math.round
                             }
                         }
                     ]
@@ -516,6 +562,9 @@
                 options: {
                     responsive: true,
                     indexAxis: isHorizontal ? 'y' : 'x',
+                    layout: {
+                        padding: isHorizontal ? { left: 100, right: 30 } : { top: 20 } // Padding for names if horizontal
+                    },
                     plugins: {
                         legend: { 
                             position: 'top',
@@ -534,15 +583,16 @@
                         x: { 
                             stacked: false,
                             ticks: { 
-                                display: false, // Hide Numbers
-                                color: textColor
+                                display: !isHorizontal, // Hide X numbers for Horizontal Chart (Performers). Show for Vertical (Position) if needed, but request said hide all grid numbers.
+                                color: textColor,
+                                font: { size: 10 }
                             },
                             grid: { display: false } // Hide Grid
                         },
                         y: { 
                             stacked: false,
                             ticks: { 
-                                display: !isHorizontal, // Hide Y Numbers for Vertical Chart (Position). Show for Horizontal (Performers) to see Names.
+                                display: isHorizontal, // Show Y numbers (Names) for Horizontal Chart. Hide for Vertical (Position) as requested.
                                 color: textColor,
                                 font: { size: 10 }
                             },
@@ -551,6 +601,12 @@
                     }
                 }
             };
+
+            // Special override for Position Chart to ensure NO numbers on axes
+            if (!isHorizontal) {
+                config.options.scales.x.ticks.display = false;
+                config.options.scales.y.ticks.display = false;
+            }
 
             const newChart = new Chart(ctx, config);
 
