@@ -532,21 +532,23 @@
             renderBarChart('chartPosition', posLabels, posLeadsData, posBookingData, 'Leads vs Booking by Position', false);
 
             // 2. Top 5 Performers (by Booking)
-            // Step A: Sort Descending (Highest Booking First)
-            const sortedDesc = [...filteredData]
-                .sort((a, b) => (b.Jlh_Leads_Booking || 0) - (a.Jlh_Leads_Booking || 0));
+            // PERBAIKAN LOGIKA SORTING CHART HORIZONTAL
+            // Chart JS Horizontal: Index 0 ada di BAWAH, Index Terakhir ada di ATAS.
+            // Agar Rank 1 (Terbesar) ada di ATAS, dia harus menjadi index terakhir.
+            // Maka kita urutkan ASCENDING (Terkecil -> Terbesar).
             
-            // Step B: Take Top 5
-            const top5 = sortedDesc.slice(0, 5);
+            const sortedAsc = [...filteredData]
+                .sort((a, b) => (a.Jlh_Leads_Booking || 0) - (b.Jlh_Leads_Booking || 0));
+            
+            // Ambil 5 data terbesar (paling belakang dari array ascending)
+            const top5 = sortedAsc.slice(-5);
 
-            // Step C: Reverse for Chart Display
-            // ChartJS Horizontal Bar renders index 0 at the BOTTOM.
-            // To show Rank 1 at the TOP, we must reverse the array so Rank 1 is last in the array.
-            const top5Reversed = [...top5].reverse();
+            // Tidak perlu reverse lagi karena slice(-5) dari ascending sudah menghasilkan [kecil, ..., besar]
+            // kecil (rank 5) akan di bawah, besar (rank 1) akan di atas.
 
-            const perfLabels = top5Reversed.map(d => d['Marketing Name']);
-            const perfLeads = top5Reversed.map(d => d.Jlh_Leads || 0);
-            const perfBooking = top5Reversed.map(d => d.Jlh_Leads_Booking || 0);
+            const perfLabels = top5.map(d => d['Marketing Name']);
+            const perfLeads = top5.map(d => d.Jlh_Leads || 0);
+            const perfBooking = top5.map(d => d.Jlh_Leads_Booking || 0);
 
             renderBarChart('chartPerformers', perfLabels, perfLeads, perfBooking, 'Top 5 Staff by Booking', true);
         }
